@@ -48,7 +48,7 @@ IS_WORTH_INCLUDING_THRESHOLD = 100
 
 ###########################################################################
 
-class PersonMessageSummary(object):
+class Conversation(object):
 	def __init__(self, other_person, messages):
 		self.other_person = other_person
 
@@ -143,13 +143,13 @@ class Message(object):
 	# Calls have a duration	
 
 	def is_call(self):
-		return self.get_type() == "Call"
+		return self.type == "Call"
 
 	def words_in_message(self):
 		return 0 if self.is_call() else len(self.content.split())
 
 	def imgur_links_in_message(self):
-		return 1 if 'imgur.com' in self.content else 0
+		return 1 if (self.type == 'Share' and 'imgur' in self.share['link']) or ('imgur.com' in self.content) else 0
 
 
 
@@ -161,12 +161,12 @@ def is_worth_including(message_list):
 def print_header(header_str):
 	print('{bold}{red}========  {header}  ========{end}'.format(bold=BOLD, red=RED, header=header_str, end=END))
 
-def print_people_messages(people_messages, up_to=15, sort_mode=TOTAL_MESSAGES_SORT_MODE):
-	_print_messages(people_messages, up_to, sort_mode, lambda message: message)
+def print_summary_data(conversations, up_to=15, sort_mode=TOTAL_MESSAGES_SORT_MODE):
+	_print_messages(conversations, up_to, sort_mode, lambda message: message)
 
 
-def print_message_history(people_messages, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
-	_print_messages(people_messages, up_to, sort_mode, lambda message: message.get_message_history_str())
+def print_messaging_history(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
+	_print_messages(conversations, up_to, sort_mode, lambda message: message.get_message_history_str())
 	
 
 
@@ -179,36 +179,45 @@ def _print_messages(people_messages, up_to, sort_mode, print_func):
 		print(idx+1, print_func(message_summary))
 
 
+def get_conversations():
+	conversations = []
+	num_conversations = 0
+	num_conversations_with_two_people = 0
+
+	folders = os.listdir(path)
+	for name in folders:
+		files = os.listdir(path + '/' + name)
+		if files[0] == 'message.json':
+			num_conversations += 1
+			with open('{}/{}/message.json'.format(path, name)) as f:
+				data = json.load(f)
+				participants = data['participants']
+				if len(participants) == 2:
+					num_conversations_with_two_people += 1
+					other_person = participants[0]['name'] if participants[0]['name'] != MY_FACEBOOK_NAME else participants[1]['name']
+				
+					if is_worth_including(data['messages']):
+						message_summary = Conversation(other_person, data['messages'])
+						conversations.append(message_summary)
+
+	print_header('Number of Conversations Found')
+	print(num_conversations)
+	print_header('Number of Conversation Between Two People')
+	print(num_conversations_with_two_people)
+
+	return conversations
+
+
+
 ###########################################################################
 
-people_messages = []
-num_conversations = 0
-num_conversations_with_two_people = 0
 
-folders = os.listdir(path)
-for name in folders:
-	files = os.listdir(path + '/' + name)
-	if files[0] == 'message.json':
-		num_conversations += 1
-		with open('{}/{}/message.json'.format(path, name)) as f:
-			data = json.load(f)
-			participants = data['participants']
-			if len(participants) == 2:
-				num_conversations_with_two_people += 1
-				other_person = participants[0]['name'] if participants[0]['name'] != MY_FACEBOOK_NAME else participants[1]['name']
-			
-				if is_worth_including(data['messages']):
-					message_summary = PersonMessageSummary(other_person, data['messages'])
-					people_messages.append(message_summary)
 
-print_header('Number of Conversations Found')
-print(num_conversations)
-print_header('Number of Conversation Between Two People')
-print(num_conversations_with_two_people)
+conversations = get_conversations()
 
 print_header('Messages Worth Including')
-print(len(people_messages))
+print(len(conversations))
 
-print_people_messages(people_messages)
+print_summary_data(conversations)
 print_header('Message Dates')
-print_message_history(people_messages)
+print_messaging_history(conversations)
