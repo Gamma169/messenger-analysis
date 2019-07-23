@@ -1,0 +1,7 @@
+*.sublime*
+*message_requests
+*filtered_threads
+*inbox
+*archived_threads
+*legacy_threads
+*stickers_used
