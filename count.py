@@ -52,28 +52,26 @@ class Conversation(object):
 	def __init__(self, other_person, messages):
 		self.other_person = other_person
 
-		newest_message = messages[0]['timestamp_ms']/1000
-		oldest_message = messages[-1]['timestamp_ms']/1000
-		self.newest_message = datetime.fromtimestamp(newest_message)
-		self.oldest_message = datetime.fromtimestamp(oldest_message)
-
+		# Dict that holds each message by month
 		self.messages_per_month = {}
+
+		self.messages = []
 
 		my_messages = 0
 		other_messages = 0
 		imgur_links = 0
 		for message in messages:
 
-			message_timestamp = datetime.fromtimestamp(message['timestamp_ms']/1000)
-			month_year = message_timestamp.strftime('%Y-%m')
+			message_obj = Message(self, **message)
+			self.messages.append(message_obj)
+
+			month_year = message_obj.month_year()
 			self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
 
 			
-			if message['sender_name'] == MY_FACEBOOK_NAME:
+			if message_obj.sent_by_me():
 				my_messages += 1
-				has_imgur_link = ('share' in message and 'imgur' in message['share']) or ('content' in message and 'imgur' in message['content'])
-				if has_imgur_link:
-					imgur_links += 1
+				imgur_links += message_obj.imgur_links_in_message()
 			else:
 				other_messages += 1
 
@@ -88,6 +86,10 @@ class Conversation(object):
 		self.total_messages = my_messages + other_messages
 		
 
+		newest_message = messages[0]['timestamp_ms']/1000
+		oldest_message = messages[-1]['timestamp_ms']/1000
+		self.newest_message = datetime.fromtimestamp(newest_message)
+		self.oldest_message = datetime.fromtimestamp(oldest_message)
 		# Should probably filter out some outliers
 		self.days_spoken = (self.newest_message - self.oldest_message).days
 		self.average_msg_per_day = self.total_messages / (float(self.days_spoken) if self.days_spoken else 1)
@@ -112,7 +114,8 @@ class Conversation(object):
 			oldest=self.oldest_message, newest=self.newest_message, days=self.days_spoken, avg=self.average_msg_per_day).strip()
 
 	def get_message_history_str(self):
-		history_str = """{bold}{blue}{name}{end}""".format(bold=BOLD, blue=BLUE, name=self.other_person, end=END)
+		"""Function that returns the conversation's history broken down by month as a string"""
+		history_str = '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END)
 		for message_tuple in self.message_time_tuples:
 			history_str += """
     {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
@@ -122,13 +125,17 @@ class Conversation(object):
 
 class Message(object):
 	"""Class that holds data on a message as well as helper and logic functions"""
-	def __init__(self, content, timestamp_ms, sender_name, type, **kwargs):
+	def __init__(self, conversation, **kwargs):
 		super(Message, self).__init__()
+		self.conversation = conversation
 
-		self.content = content
-		self.time = datetime.fromtimestamp(timestamp_ms/1000)
-		self.sender = sender_name
-		self.type = type
+		# We want the message to die if it doesn't have these kwargs
+		self.time = datetime.fromtimestamp(kwargs['timestamp_ms']/1000)
+		self.sender = kwargs['sender_name']
+		self.type = kwargs['type']
+
+		# Somehow, a message can not have the content key
+		self.content = kwargs.get('content', '')
 
 		for k in kwargs:
 			setattr(self, k, kwargs[k])
@@ -136,6 +143,9 @@ class Message(object):
 	
 	def sent_by_me(self):
 		return self.sender_name == MY_FACEBOOK_NAME
+
+	def month_year(self):
+		return self.time.strftime('%Y-%m')
 
 	# Types of messages:  Generic, Share, Call
 	# Generic messages can have links in them or can be gifs/photos/stickers
@@ -149,7 +159,17 @@ class Message(object):
 		return 0 if self.is_call() else len(self.content.split())
 
 	def imgur_links_in_message(self):
-		return 1 if (self.type == 'Share' and 'imgur' in self.share['link']) or ('imgur.com' in self.content) else 0
+		return 1 if (self.type == 'Share' and 'imgur' in getattr(self, 'share', {'link':''})['link']) or ('imgur.com' in self.content) else 0
+
+
+	def __str__(self):
+		return """
+		Conversation: {conv}
+		Sender: {sender}
+		Type: {type}
+		Time: {time}
+		Content: {content}
+		""".format(conv=self.conversation.other_person, sender=self.sender, type=self.type, time=self.time, content=self.content).strip()
 
 
 
@@ -197,8 +217,7 @@ def get_conversations():
 					other_person = participants[0]['name'] if participants[0]['name'] != MY_FACEBOOK_NAME else participants[1]['name']
 				
 					if is_worth_including(data['messages']):
-						message_summary = Conversation(other_person, data['messages'])
-						conversations.append(message_summary)
+						conversations.append(Conversation(other_person, data['messages']))
 
 	print_header('Number of Conversations Found')
 	print(num_conversations)
@@ -219,5 +238,5 @@ print_header('Messages Worth Including')
 print(len(conversations))
 
 print_summary_data(conversations)
-print_header('Message Dates')
-print_messaging_history(conversations)
+# print_header('Message Dates')
+# print_messaging_history(conversations)
