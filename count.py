@@ -96,7 +96,7 @@ class Conversation(object):
 
 	def __str__(self):
 		return """
-{bold}{blue}{name}{end}
+	{bold}{blue}{name}{end}
 	{green}{underline}Total Messages:{end}       {bold}{total}{end}
 	{green}{underline}My Total Messages:{end}    {bold}{mine}{end}
 	{green}{underline}My Imgur Links:{end}       {bold}{imgur}{end}
