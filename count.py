@@ -22,17 +22,17 @@ OLDEST_SORT_MODE = 2
 SORT_CONFIGS = {
 	TOTAL_MESSAGES_SORT_MODE: {
 		'type': 'Total',
-		'sort_func': lambda message: message.total_messages,
+		'sort_func': lambda conversation: conversation.summary.total_messages,
 		'reverse': True,
 	},
 	IMGUR_LINKS_SORT_MODE: {
 		'type': 'Imgur',
-		'sort_func': lambda message: message.imgur_links,
+		'sort_func': lambda conversation: conversation.summary.imgur_links,
 		'reverse': True,
 	},	
 	OLDEST_SORT_MODE: {
 		'type': 'Oldest',
-		'sort_func': lambda message: message.oldest_message,
+		'sort_func': lambda conversation: conversation.summary.oldest_message,
 		'reverse': False,
 	},	
 }
@@ -49,52 +49,73 @@ IS_WORTH_INCLUDING_THRESHOLD = 100
 ###########################################################################
 
 class Conversation(object):
+	"""
+	High-level wrapper class that holds information about messages,
+	convenience functions, and summary object
+	"""
 	def __init__(self, other_person, messages):
 		self.other_person = other_person
 
 		# Dict that holds each message by month
-		self.messages_per_month = {}
+		# self.messages_per_month = {}
 
 		self.messages = []
-
-		my_messages = 0
-		other_messages = 0
-		imgur_links = 0
 		for message in messages:
+			self.messages.append(Message(self, **message))
 
-			message_obj = Message(self, **message)
-			self.messages.append(message_obj)
 
-			month_year = message_obj.month_year()
-			self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
+		self.summary = ConversationSummary(self.other_person, self.messages)
 
-			
-			if message_obj.sent_by_me():
-				my_messages += 1
-				imgur_links += message_obj.imgur_links_in_message()
+			# month_year = message_obj.month_year()
+			# self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
+
+
+		# self.message_time_tuples = [(k, self.messages_per_month[k]) for k in self.messages_per_month.keys()]
+		# self.message_time_tuples = sorted(self.message_time_tuples, key=lambda tuple: tuple[0])
+
+
+	def __str__(self):
+		return str(self.summary)
+
+	# def get_message_history_str(self):
+	# 	"""Function that returns the conversation's history broken down by month as a string"""
+	# 	history_str = '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END)
+	# 	for message_tuple in self.message_time_tuples:
+	# 		history_str += """
+ #    {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
+	# 	return history_str
+
+
+###########################################################################
+
+class ConversationSummary(object):
+	"""
+	Holds summary data around a conversation
+	"""
+	def __init__(self, other_person, messages):
+		self.other_person = other_person
+		self.total_messages = len(messages)
+		self.my_total_messages = 0
+		self.my_actual_messages = 0
+		self.other_messages = 0
+		self.imgur_links = 0
+
+		for message in messages:
+			if message.sent_by_me():
+				self.my_total_messages += 1
+				num_links = message.imgur_links_in_message()
+				self.imgur_links += num_links
+				if num_links == 0:
+					self.my_actual_messages += 1
 			else:
-				other_messages += 1
+				self.other_messages += 1
 
 
-		self.message_time_tuples = [(k, self.messages_per_month[k]) for k in self.messages_per_month.keys()]
-		self.message_time_tuples = sorted(self.message_time_tuples, key=lambda tuple: tuple[0])
-		
-		self.other_messages = other_messages
-		self.my_total_messages = my_messages
-		self.imgur_links = imgur_links
-		self.my_actual_messages = my_messages - imgur_links
-		self.total_messages = my_messages + other_messages
-		
-
-		newest_message = messages[0]['timestamp_ms']/1000
-		oldest_message = messages[-1]['timestamp_ms']/1000
-		self.newest_message = datetime.fromtimestamp(newest_message)
-		self.oldest_message = datetime.fromtimestamp(oldest_message)
+		self.newest_message_time = messages[0].time
+		self.oldest_message_time = messages[-1].time
 		# Should probably filter out some outliers
-		self.days_spoken = (self.newest_message - self.oldest_message).days
+		self.days_spoken = (self.newest_message_time - self.oldest_message_time).days
 		self.average_msg_per_day = self.total_messages / (float(self.days_spoken) if self.days_spoken else 1)
-
-		
 
 	def __str__(self):
 		return """
@@ -111,20 +132,22 @@ class Conversation(object):
 		""".format(bold=BOLD, green=GREEN, blue=BLUE, underline=UNDERLINE, end=END, 
 			name=self.other_person,
 			total=self.total_messages, mine=self.my_total_messages, imgur=self.imgur_links, mine_actual=self.my_actual_messages, other=self.other_messages, 
-			oldest=self.oldest_message, newest=self.newest_message, days=self.days_spoken, avg=self.average_msg_per_day).strip()
+			oldest=self.oldest_message_time, newest=self.newest_message_time, days=self.days_spoken, avg=self.average_msg_per_day).strip()
 
-	def get_message_history_str(self):
-		"""Function that returns the conversation's history broken down by month as a string"""
-		history_str = '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END)
-		for message_tuple in self.message_time_tuples:
-			history_str += """
-    {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
-		return history_str
+
+###########################################################################
+class ConversationHistory(object):
+	"""
+	Class that holds history information around a conversation
+	"""
+	pass
 
 ###########################################################################
 
 class Message(object):
-	"""Class that holds data on a message as well as helper and logic functions"""
+	"""
+	Class that holds data on a message as well as helper and logic functions
+	"""
 	def __init__(self, conversation, **kwargs):
 		super(Message, self).__init__()
 		self.conversation = conversation
@@ -182,21 +205,21 @@ def print_header(header_str):
 	print('{bold}{red}========  {header}  ========{end}'.format(bold=BOLD, red=RED, header=header_str, end=END))
 
 def print_summary_data(conversations, up_to=15, sort_mode=TOTAL_MESSAGES_SORT_MODE):
-	_print_messages(conversations, up_to, sort_mode, lambda message: message)
+	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation)
 
 
 def print_messaging_history(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
-	_print_messages(conversations, up_to, sort_mode, lambda message: message.get_message_history_str())
+	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.get_message_history_str())
 	
 
 
-def _print_messages(people_messages, up_to, sort_mode, print_func):
+def _print_messages(conversations, up_to, sort_mode, print_func):
 	sort_obj = SORT_CONFIGS[sort_mode]
 
-	print_header('Messages Sorted By ' + sort_obj['type'])
-	sorted_msgs = sorted(people_messages, key=sort_obj['sort_func'], reverse=sort_obj['reverse'])
-	for idx, message_summary in enumerate(sorted_msgs[0:up_to]):
-		print(idx+1, print_func(message_summary))
+	print_header('Conversations Sorted By ' + sort_obj['type'])
+	sorted_conversations = sorted(conversations, key=sort_obj['sort_func'], reverse=sort_obj['reverse'])
+	for idx, conversation_summary in enumerate(sorted_conversations[0:up_to]):
+		print(idx+1, print_func(conversation_summary))
 
 
 def get_conversations():
