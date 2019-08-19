@@ -79,9 +79,13 @@ class Conversation(object):
 
 
 	def messages_history_bar_obj(self):
-		num_message_history = self.history.messages_month_map()
-		return go.Bar(name=self.other_person, x=self.history.message_dates, y=[num_message_history[month] for month in self.history.message_dates])
+		return self._create_bar_on_history_map(self.history.messages_month_map())
 
+	def words_history_bar_obj(self):
+		return self._create_bar_on_history_map(self.history.words_month_map())
+
+	def _create_bar_on_history_map(self, history_map):
+		return go.Bar(name=self.other_person, x=self.history.message_dates, y=[history_map[month] for month in self.history.message_dates])
 
 
 ###########################################################################
@@ -288,7 +292,7 @@ def sort_conversations(conversations, sort_mode):
 
 
 def _print_messages(conversations, up_to, sort_mode, print_func):
-	print_header('Conversations Sorted By ' + sort_obj['type'])
+	print_header('Conversations Sorted By ' + SORT_CONFIGS[sort_mode]['type'])
 	sorted_conversations = sort_conversations(conversations, sort_mode)
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
@@ -340,7 +344,7 @@ print_summary_data(conversations)
 
 sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
 fig = go.Figure(
-	data=[conv.messages_history_bar_obj() for conv in sorted_conversations[0:8]]
+	data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:4]]
 	)
 fig.update_layout(barmode='group')
 
