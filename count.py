@@ -4,6 +4,8 @@ import json
 import os
 from datetime import datetime
 
+import plotly.graph_objects as go
+
 
 ###########################################################################
 # Constants
@@ -74,6 +76,11 @@ class Conversation(object):
 
 	def words_history_str(self):
 		return self.header_str + str(self.history.words_month_str())
+
+
+	def messages_history_bar_obj(self):
+		num_message_history = self.history.messages_month_map()
+		return go.Bar(name=self.other_person, x=self.history.message_dates, y=[num_message_history[month] for month in self.history.message_dates])
 
 
 
@@ -275,11 +282,14 @@ def print_messaging_history_words_per_month(conversations, up_to=7, sort_mode=TO
 	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.words_history_str())	
 	
 
-def _print_messages(conversations, up_to, sort_mode, print_func):
+def sort_conversations(conversations, sort_mode):
 	sort_obj = SORT_CONFIGS[sort_mode]
+	return sorted(conversations, key=sort_obj['sort_func'], reverse=sort_obj['reverse'])
 
+
+def _print_messages(conversations, up_to, sort_mode, print_func):
 	print_header('Conversations Sorted By ' + sort_obj['type'])
-	sorted_conversations = sorted(conversations, key=sort_obj['sort_func'], reverse=sort_obj['reverse'])
+	sorted_conversations = sort_conversations(conversations, sort_mode)
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
 
@@ -318,10 +328,20 @@ def get_conversations():
 
 conversations = get_conversations()
 
-print_header('Messages Worth Including')
-print(len(conversations))
+# print_header('Messages Worth Including')
+# print(len(conversations))
 
 print_summary_data(conversations)
-print_header('Message Dates')
-# print_messaging_history(conversations)
-print_messaging_history_words_per_month(conversations)
+# print_header('Message Dates')
+# # print_messaging_history(conversations)
+# print_messaging_history_words_per_month(conversations)
+
+
+
+sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
+fig = go.Figure(
+	data=[conv.messages_history_bar_obj() for conv in sorted_conversations[0:8]]
+	)
+fig.update_layout(barmode='group')
+
+fig.show()
