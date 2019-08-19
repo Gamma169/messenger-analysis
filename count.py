@@ -72,6 +72,7 @@ class Conversation(object):
 		return '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END) + str(self.history)
 
 
+
 ###########################################################################
 
 class ConversationSummary(object):
@@ -151,6 +152,29 @@ class ConversationHistory(object):
 	def num_messages_for_month(self, yyyy_mm):
 		return len(self.monthly_messages.get(yyyy_mm, []))
 
+	def num_words_for_month(self, yyyy_mm):
+		messages = self.monthly_messages.get(yyyy_mm, [])
+		num_words = 0
+		for message in messages:
+			num_words += message.words_in_message()
+		return num_words
+
+	def words_per_month_breakdown(self):
+		"""Maps monthly_messages into number of words per month"""
+		words_per_month = {}
+		for month in self.message_dates:
+			words_per_month[month] = self.num_words_for_month(month)
+		return words_per_month
+
+	def words_per_month_str(self):
+		words_str = ''
+		words_per_month = self.words_per_month_breakdown()
+		for month in self.message_dates:
+			history_str += """
+    {k} -- {v}""".format(k=message_date, v=words_per_month[month])
+		return history_str
+
+
 	def __str__(self):
 		"""Function that returns the conversation's history broken down by month as a string"""
 		history_str = ''
@@ -228,6 +252,10 @@ def print_summary_data(conversations, up_to=15, sort_mode=TOTAL_MESSAGES_SORT_MO
 
 def print_messaging_history(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
 	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.message_history_str())
+
+# TODO
+def print_messaging_history_words_per_month(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
+	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.message_history_str())	
 	
 
 
