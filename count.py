@@ -73,7 +73,7 @@ class Conversation(object):
 		return self.header_str + str(self.history)
 
 	def words_history_str(self):
-		return self.header_str + str(self.history.words_per_month_str())
+		return self.header_str + str(self.history.words_month_str())
 
 
 
@@ -164,13 +164,17 @@ class ConversationHistory(object):
 			num_words += message.words_in_message()
 		return num_words
 
-	def messages_per_month_map(self):
-		"""Maps monthly messages into messaged per month"""
+	def messages_month_map(self):
+		"""Maps monthly_messages into number of messages sent each month"""
 		return self._map(lambda month: self.num_messages_for_month(month))
 
-	def words_per_month_map(self):
-		"""Maps monthly_messages into number of words per month"""
+	def words_month_map(self):
+		"""Maps monthly_messages into number of words sent each month"""
 		return self._map(lambda month: self.num_words_for_month(month))
+
+	def words_per_message_month_map(self):
+		"""Maps monthly_messages into number of words per message sent each month"""
+		return self._map(lambda month: self.num_words_for_month(month) / self.num_messages_for_month(month))
 
 	def _map(self, map_func):
 		"""Maps monthly-messages according to the map-function"""
@@ -179,8 +183,8 @@ class ConversationHistory(object):
 			mapped_msgs[month] = map_func(month)
 		return mapped_msgs
 
-	def words_per_month_str(self):
-		return self._stringify(self.words_per_month_map())
+	def words_month_str(self):
+		return self._stringify(self.words_month_map())
 
 	def _stringify(self, monthly_messages_map):
 		"""
@@ -194,7 +198,7 @@ class ConversationHistory(object):
 		return ret_str
 
 	def __str__(self):
-		return self._stringify(self.messages_per_month_map())
+		return self._stringify(self.messages_month_map())
 	
 
 ###########################################################################
