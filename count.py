@@ -56,15 +56,12 @@ class Conversation(object):
 	def __init__(self, messages):
 
 
-		self.messages = []
-		for message in messages:
-			self.messages.append(Message(self, **message))
-
+		self.messages = [Message(self, **message) for message in messages]
 
 		self.summary = ConversationSummary(self.messages)
 		self.history = ConversationHistory(self.messages)
 
-		# Just a convenience attribute
+		# Just a convenience attribute so we don't have to reference the summary's other person
 		self.other_person = self.summary.other_person
 
 
@@ -136,22 +133,30 @@ class ConversationHistory(object):
 	"""
 
 	def __init__(self, messages):
-		self.messages_per_month = {}
+		# A dict that holds references to message object based on the month was sent in
+		# Key is string 'YYYY-MM'
+		self.monthly_messages = {}
 
 		for message in messages:
-			month_year = message.month_year()
-			self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
+			year_month = message.year_month()
+			if self.monthly_messages.get(year_month):
+				self.monthly_messages[year_month].append(message)
+			else:
+				self.monthly_messages[year_month] = [message]
 
-		# Get all the month-years in a sorted order
-		self.message_time_tuples = sorted([(k, self.messages_per_month[k]) for k in self.messages_per_month.keys()], key=lambda tuple: tuple[0])
-		
+
+		# Get all the year-month keys in a sorted order
+		self.message_dates = sorted(self.monthly_messages.keys(), key=lambda year_month: year_month)
+
+	def num_messages_for_month(self, yyyy_mm):
+		return len(self.monthly_messages.get(yyyy_mm, []))
 
 	def __str__(self):
 		"""Function that returns the conversation's history broken down by month as a string"""
 		history_str = ''
-		for message_tuple in self.message_time_tuples:
+		for message_date in self.message_dates:
 			history_str += """
-    {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
+    {k} -- {v}""".format(k=message_date, v=self.num_messages_for_month(message_date))
 		return history_str
 	
 
@@ -180,7 +185,7 @@ class Message(object):
 	def sent_by_me(self):
 		return self.sender_name == MY_FACEBOOK_NAME
 
-	def month_year(self):
+	def year_month(self):
 		return self.time.strftime('%Y-%m')
 
 	# Types of messages:  Generic, Share, Call
