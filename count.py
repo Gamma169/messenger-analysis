@@ -256,6 +256,7 @@ class Message(object):
 
 
 ###########################################################################
+# Utils
 
 def is_worth_including(message_list):
 	return len(message_list) >= IS_WORTH_INCLUDING_THRESHOLD
@@ -274,14 +275,13 @@ def print_messaging_history_words_per_month(conversations, up_to=7, sort_mode=TO
 	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.words_history_str())	
 	
 
-
 def _print_messages(conversations, up_to, sort_mode, print_func):
 	sort_obj = SORT_CONFIGS[sort_mode]
 
 	print_header('Conversations Sorted By ' + sort_obj['type'])
 	sorted_conversations = sorted(conversations, key=sort_obj['sort_func'], reverse=sort_obj['reverse'])
-	for idx, conversation_summary in enumerate(sorted_conversations[0:up_to]):
-		print(idx+1, print_func(conversation_summary))
+	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
+		print(idx+1, print_func(conversation))
 
 
 def get_conversations():
