@@ -51,39 +51,28 @@ IS_WORTH_INCLUDING_THRESHOLD = 100
 class Conversation(object):
 	"""
 	High-level wrapper class that holds information about messages,
-	convenience functions, and summary object
+	convenience functions, and objects that hold logic for different parts of the script
 	"""
-	def __init__(self, other_person, messages):
-		self.other_person = other_person
+	def __init__(self, messages):
 
-		# Dict that holds each message by month
-		# self.messages_per_month = {}
 
 		self.messages = []
 		for message in messages:
 			self.messages.append(Message(self, **message))
 
 
-		self.summary = ConversationSummary(self.other_person, self.messages)
+		self.summary = ConversationSummary(self.messages)
+		self.history = ConversationHistory(self.messages)
 
-			# month_year = message_obj.month_year()
-			# self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
-
-
-		# self.message_time_tuples = [(k, self.messages_per_month[k]) for k in self.messages_per_month.keys()]
-		# self.message_time_tuples = sorted(self.message_time_tuples, key=lambda tuple: tuple[0])
+		# Just a convenience attribute
+		self.other_person = self.summary.other_person
 
 
 	def __str__(self):
 		return str(self.summary)
 
-	# def get_message_history_str(self):
-	# 	"""Function that returns the conversation's history broken down by month as a string"""
-	# 	history_str = '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END)
-	# 	for message_tuple in self.message_time_tuples:
-	# 		history_str += """
- #    {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
-	# 	return history_str
+	def message_history_str(self):
+		return '{bold}{blue}{name}{end}'.format(bold=BOLD, blue=BLUE, name=self.other_person, end=END) + str(self.history)
 
 
 ###########################################################################
@@ -92,8 +81,13 @@ class ConversationSummary(object):
 	"""
 	Holds summary data around a conversation
 	"""
-	def __init__(self, other_person, messages):
-		self.other_person = other_person
+	def __init__(self, messages):
+		self.other_person = ''
+		for message in messages:
+			if not message.sent_by_me():
+				self.other_person = message.sender_name
+				break
+
 		self.total_messages = len(messages)
 		self.my_total_messages = 0
 		self.my_actual_messages = 0
@@ -140,7 +134,26 @@ class ConversationHistory(object):
 	"""
 	Class that holds history information around a conversation
 	"""
-	pass
+
+	def __init__(self, messages):
+		self.messages_per_month = {}
+
+		for message in messages:
+			month_year = message.month_year()
+			self.messages_per_month[month_year] = (self.messages_per_month.get(month_year) + 1) if self.messages_per_month.get(month_year) else 1
+
+		# Get all the month-years in a sorted order
+		self.message_time_tuples = sorted([(k, self.messages_per_month[k]) for k in self.messages_per_month.keys()], key=lambda tuple: tuple[0])
+		
+
+	def __str__(self):
+		"""Function that returns the conversation's history broken down by month as a string"""
+		history_str = ''
+		for message_tuple in self.message_time_tuples:
+			history_str += """
+    {k} -- {v}""".format(k=message_tuple[0], v=message_tuple[1])
+		return history_str
+	
 
 ###########################################################################
 
@@ -149,7 +162,7 @@ class Message(object):
 	Class that holds data on a message as well as helper and logic functions
 	"""
 	def __init__(self, conversation, **kwargs):
-		super(Message, self).__init__()
+		# A self-reference to the overall conversation for convenience
 		self.conversation = conversation
 
 		# We want the message to die if it doesn't have these kwargs
@@ -209,7 +222,7 @@ def print_summary_data(conversations, up_to=15, sort_mode=TOTAL_MESSAGES_SORT_MO
 
 
 def print_messaging_history(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
-	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.get_message_history_str())
+	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.message_history_str())
 	
 
 
@@ -237,10 +250,9 @@ def get_conversations():
 				participants = data['participants']
 				if len(participants) == 2:
 					num_conversations_with_two_people += 1
-					other_person = participants[0]['name'] if participants[0]['name'] != MY_FACEBOOK_NAME else participants[1]['name']
 				
 					if is_worth_including(data['messages']):
-						conversations.append(Conversation(other_person, data['messages']))
+						conversations.append(Conversation(data['messages']))
 
 	print_header('Number of Conversations Found')
 	print(num_conversations)
@@ -261,5 +273,5 @@ print_header('Messages Worth Including')
 print(len(conversations))
 
 print_summary_data(conversations)
-# print_header('Message Dates')
-# print_messaging_history(conversations)
+print_header('Message Dates')
+print_messaging_history(conversations)
