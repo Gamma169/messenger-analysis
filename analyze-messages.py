@@ -329,6 +329,8 @@ def get_conversations():
 	print(num_conversations)
 	print_header('Number of Conversation Between Two People')
 	print(num_conversations_with_two_people)
+	print_header('Messages Worth Including')
+	print(len(conversations))
 
 	return conversations
 
@@ -352,38 +354,47 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--top-people', type=int, default=5,
 		help='The top number of people people to display.  Default 5')
 	parser.add_argument('-f', '--filter', type=str, default='',
-		help='List of names, seperated by comma, for the program to filter to. If not provided, will do no filtering')
+		help='List of names, seperated by comma, for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name.')
 
 	# Summary-only
-	# parser.add_argument('--so')
-
-
+	parser.add_argument('-so', '--summary-only', action='store_true',
+		help='Print only summary information in command-line.  Do not display graphs')
+	# Include Words-Count
+	parser.add_argument('-w', '--word-count', action='store_true',
+		help='Display analysis with word-count in addition to total messages')
 
 	args = parser.parse_args()
-	print(args)
-
-
-
-
-
-
-
+	
+	my_facebook_name = args.my_name
+	path = args.path
+	is_worth_including_threshold = args.include_threshold
+	sort_mode = args.sort_mode
+	num_to_display = args.top_people
+	filtered_list = args.filter.split(',') if len(args.filter) > 0 else []
+	summary_only = args.summary_only
+	use_words = args.word_count
+	
 	conversations = get_conversations()
-
-	# print_header('Messages Worth Including')
-	# print(len(conversations))
-
-	print_summary_data(conversations)
-	# print_header('Message Dates')
-	# # print_messaging_history(conversations)
-	# print_messaging_history_words_per_month(conversations)
+	if len(filtered_list) > 0:
+		print_header('Filtering Conversations Down To {} Given Names'.format(len(filtered_list)))
+		conversations = [conv for conv in conversations if conv.other_person in filtered_list]
 
 
+	print_summary_data(conversations, up_to=num_to_display, sort_mode=sort_mode)
+	
+	if not summary_only:
+		print_header('Messaging History in Total Messages Per Month')
+		print_messaging_history(conversations, up_to=num_to_display, sort_mode=sort_mode)
+	
+		if use_words:
+			print_header('Messaging History in Total Words Per Month')
+			print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
 
-	# sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
-	# fig = go.Figure(
-	# 	data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:4]]
-	# 	)
-	# fig.update_layout(barmode='group')
+		sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
+		fig1 = go.Figure(
+			data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:6]]
+			)
+		fig1.update_layout(barmode='group')
 
-	# fig.show()
+		fig1.show()
+	
