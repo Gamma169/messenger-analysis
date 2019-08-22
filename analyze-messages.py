@@ -95,6 +95,16 @@ class Conversation(object):
 	def _create_bar_on_history_map(self, history_map):
 		return go.Bar(name=self.other_person, x=self.history.message_dates, y=[history_map[month] for month in self.history.message_dates])
 
+	def messages_history_relative_line_obj(self):
+		return self._create_relative_line_on_history_map(self.history.messages_month_map())
+
+	def words_history_relative_line_obj(self):
+		return self._create_relative_line_on_history_map(self.history.words_month_map())
+
+	def _create_relative_line_on_history_map(self, history_map):
+		return go.Scatter(name=self.other_person, x=self.history.message_dates, y=[history_map[month] for month in self.history.message_dates],
+			mode='lines', stackgroup='one', groupnorm='percent')
+
 
 ###########################################################################
 
@@ -305,22 +315,73 @@ def _print_messages(conversations, up_to, sort_mode, print_func):
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
 
-def display_conversations_as_bars(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False):
+def display_conversations_as_bars(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False, bar_mode='group'):
 	conversations_sorted = sort_conversations(conversations, sort_mode)
 
 	history_total_msgs_figure = go.Figure(
-		data=[conv.messages_history_bar_obj() for conv in conversations[0:up_to]]
+		data=[conv.messages_history_bar_obj() for conv in conversations_sorted[0:up_to]]
 	)
-	history_total_msgs_figure.update_layout(barmode='group')
-
+	_style_bar_chart(history_total_msgs_figure, 'Total Messages Sent In Conversation Over Time', is_words=False, bar_mode=bar_mode)
 	history_total_msgs_figure.show()
 
 	if use_words:
 		history_words_figure = go.Figure(
-			data=[conv.words_history_bar_obj() for conv in conversations[0:up_to]]
+			data=[conv.words_history_bar_obj() for conv in conversations_sorted[0:up_to]]
 		)
-		history_words_figure.update_layout(barmode='group')
+		_style_bar_chart(history_words_figure, 'Total Words Written In Conversation Over Time', is_words=True, bar_mode=bar_mode)
 		history_words_figure.show()
+
+def _style_bar_chart(figure, name, is_words=True, bar_mode='group'):
+	figure.update_layout(
+		barmode=bar_mode,
+		title=go.layout.Title(
+			text=name,
+			xref='paper',
+			x=0
+		),
+		xaxis=go.layout.XAxis(
+			nticks=50,
+			tickangle=-45
+		),
+		yaxis=go.layout.YAxis(
+		title=go.layout.yaxis.Title(
+			text='Total Amount of Words Written' if is_words else 'Total Number of Messages Sent',
+			)
+		)
+	)
+
+def display_conversations_relative_percents(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False):
+	conversations_sorted = sort_conversations(conversations, sort_mode)
+
+	total_messages_figure = go.Figure()
+	for conv in conversations_sorted[0:up_to]:
+		total_messages_figure.add_trace(conv.messages_history_relative_line_obj())
+
+	_style_relative_percent_chart(total_messages_figure, 'Relative Percents of Total Messages Over Time')
+	total_messages_figure.show()
+
+	if use_words:
+		total_words_figure = go.Figure()
+		for conv in conversations_sorted[0:up_to]:
+			total_words_figure.add_trace(conv.words_history_relative_line_obj())
+
+		_style_relative_percent_chart(total_words_figure, 'Relative Percents of Words Sent Over Time')
+		total_words_figure.show()
+
+def _style_relative_percent_chart(figure, name):
+	figure.update_layout(
+		showlegend=True,
+		title=go.layout.Title(
+			text=name,
+			xref='paper',
+			x=0
+		),
+		yaxis=dict(
+			type='linear',
+			range=[1, 100],
+			ticksuffix='%'
+		)
+	)
 
 def get_conversations():
 	conversations = []
@@ -378,6 +439,8 @@ if __name__ == '__main__':
 	# Include Words-Count
 	parser.add_argument('-w', '--word-count', action='store_true',
 		help='Display analysis with word-count in addition to total messages')
+	parser.add_argument('-b', '--bar-mode', type=str, default='group', choices=['group', 'stack'], 
+		help='How to display the bars in the history graph. Default "group"')
 
 	args = parser.parse_args()
 	
@@ -389,6 +452,7 @@ if __name__ == '__main__':
 	filtered_list = args.filter.split(',') if len(args.filter) > 0 else []
 	summary_only = args.summary_only
 	use_words = args.word_count
+	bar_mode = args.bar_mode
 	
 	conversations = get_conversations()
 	if len(filtered_list) > 0:
@@ -406,4 +470,6 @@ if __name__ == '__main__':
 			print_header('Messaging History in Total Words Per Month')
 			print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
 
-		display_conversations_as_bars(conversations, up_to=num_to_display, use_words=use_words)
+		display_conversations_as_bars(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words, bar_mode=bar_mode)
+
+		display_conversations_relative_percents(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words)
