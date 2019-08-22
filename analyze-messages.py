@@ -6,6 +6,15 @@ from datetime import datetime
 
 import plotly.graph_objects as go
 
+###########################################################################
+# Parameters
+
+path = './inbox'
+
+MY_FACEBOOK_NAME = 'Rienzi Gokea'
+
+IS_WORTH_INCLUDING_THRESHOLD = 100
+
 
 ###########################################################################
 # Constants
@@ -38,15 +47,6 @@ SORT_CONFIGS = {
 		'reverse': False,
 	},	
 }
-
-###########################################################################
-# Parameters
-
-path = './inbox'
-
-MY_FACEBOOK_NAME = 'Rienzi Gokea'
-
-IS_WORTH_INCLUDING_THRESHOLD = 100
 
 ###########################################################################
 
