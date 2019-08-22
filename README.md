@@ -8,17 +8,23 @@ Runs in python3
 
 https://www.facebook.com/help/1701730696756992?helpref=hc_global_nav
 
-Note that you can download a lot more than just your messenger history, but this program only works on messenger for now
+Note that you can download a lot more than just your messenger history, but this program only works on facebook messages.
 
 
-## Running
+## Setup
 
 Download your facebook messenger history as explained in the section above.
 
-Unpack the history into the folder containing the `analyze-messages.py` file
+Unpack the history into the folder containing the `analyze-messages.py` file.  Make sure you have the `inbox` directory the same level as the file, or you will need to manually set the path for the files.
 
-Run the file:
-`python3 analyze-messages.py`
+Install the requirements using
+`pip3 install -r requirements.txt`
+
+## Running
+
+Basic Run:
+`python3 analyze-messages.py <your facebook name>`
+
 
 
 

@@ -1,19 +1,27 @@
 #! /usr/bin/env python3
 
+import argparse
+from datetime import datetime
 import json
 import os
-from datetime import datetime
+
 
 import plotly.graph_objects as go
 
 ###########################################################################
 # Parameters
 
+# Required
+my_facebook_name = ''
+
+# Optional
 path = './inbox'
 
-MY_FACEBOOK_NAME = 'Rienzi Gokea'
+is_worth_including_threshold = 100
 
-IS_WORTH_INCLUDING_THRESHOLD = 100
+sort_mode = 'total'
+
+filtered_list = []
 
 
 ###########################################################################
@@ -26,9 +34,9 @@ BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 END = '\033[0m'
 
-TOTAL_MESSAGES_SORT_MODE = 0
-IMGUR_LINKS_SORT_MODE = 1
-OLDEST_SORT_MODE = 2
+TOTAL_MESSAGES_SORT_MODE = 'total'
+IMGUR_LINKS_SORT_MODE = 'imgur'
+OLDEST_SORT_MODE = 'oldest'
 
 SORT_CONFIGS = {
 	TOTAL_MESSAGES_SORT_MODE: {
@@ -235,7 +243,7 @@ class Message(object):
 
 	
 	def sent_by_me(self):
-		return self.sender_name == MY_FACEBOOK_NAME
+		return self.sender_name == my_facebook_name
 
 	def year_month(self):
 		return self.time.strftime('%Y-%m')
@@ -270,7 +278,7 @@ class Message(object):
 # Utils
 
 def is_worth_including(message_list):
-	return len(message_list) >= IS_WORTH_INCLUDING_THRESHOLD
+	return len(message_list) >= is_worth_including_threshold
 
 def print_header(header_str):
 	print('{bold}{red}========  {header}  ========{end}'.format(bold=BOLD, red=RED, header=header_str, end=END))
@@ -328,24 +336,54 @@ def get_conversations():
 
 ###########################################################################
 
+if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser(description='A program to analyze facebook messenger data.')
+	
+	parser.add_argument('my_name', type=str, 
+		help='The name you use for facebook.  The name that shows up for you in the messages')
+	
+	parser.add_argument('-p', '--path', type=str, default=path,
+		help='Relative or absolute path to the location of the conversation folders. Default "./inbox"')
+	parser.add_argument('-i', '--include-threshold', type=int, default=is_worth_including_threshold,
+		help='The smallest number of total messages in a conversation for a conversation to be counted. Default 100')
+	parser.add_argument('-s', '--sort-mode', type=str, default=sort_mode, choices=[TOTAL_MESSAGES_SORT_MODE, IMGUR_LINKS_SORT_MODE, OLDEST_SORT_MODE], 
+		help='How to sort the messages by.  Default "total"')
+	parser.add_argument('-t', '--top-people', type=int, default=5,
+		help='The top number of people people to display.  Default 5')
+	parser.add_argument('-f', '--filter', type=str, default='',
+		help='List of names, seperated by comma, for the program to filter to. If not provided, will do no filtering')
+
+	# Summary-only
+	# parser.add_argument('--so')
 
 
-conversations = get_conversations()
 
-# print_header('Messages Worth Including')
-# print(len(conversations))
-
-print_summary_data(conversations)
-# print_header('Message Dates')
-# # print_messaging_history(conversations)
-# print_messaging_history_words_per_month(conversations)
+	args = parser.parse_args()
+	print(args)
 
 
 
-sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
-fig = go.Figure(
-	data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:4]]
-	)
-fig.update_layout(barmode='group')
 
-fig.show()
+
+
+
+	conversations = get_conversations()
+
+	# print_header('Messages Worth Including')
+	# print(len(conversations))
+
+	print_summary_data(conversations)
+	# print_header('Message Dates')
+	# # print_messaging_history(conversations)
+	# print_messaging_history_words_per_month(conversations)
+
+
+
+	# sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
+	# fig = go.Figure(
+	# 	data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:4]]
+	# 	)
+	# fig.update_layout(barmode='group')
+
+	# fig.show()
