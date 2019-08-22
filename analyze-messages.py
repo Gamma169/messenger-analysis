@@ -51,7 +51,7 @@ SORT_CONFIGS = {
 	},	
 	OLDEST_SORT_MODE: {
 		'type': 'Oldest',
-		'sort_func': lambda conversation: conversation.summary.oldest_message,
+		'sort_func': lambda conversation: conversation.summary.oldest_message_time,
 		'reverse': False,
 	},	
 }
@@ -305,6 +305,22 @@ def _print_messages(conversations, up_to, sort_mode, print_func):
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
 
+def display_conversations_as_bars(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False):
+	conversations_sorted = sort_conversations(conversations, sort_mode)
+
+	history_total_msgs_figure = go.Figure(
+		data=[conv.messages_history_bar_obj() for conv in conversations[0:up_to]]
+	)
+	history_total_msgs_figure.update_layout(barmode='group')
+
+	history_total_msgs_figure.show()
+
+	if use_words:
+		history_words_figure = go.Figure(
+			data=[conv.words_history_bar_obj() for conv in conversations[0:up_to]]
+		)
+		history_words_figure.update_layout(barmode='group')
+		history_words_figure.show()
 
 def get_conversations():
 	conversations = []
@@ -390,11 +406,4 @@ if __name__ == '__main__':
 			print_header('Messaging History in Total Words Per Month')
 			print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
 
-		sorted_conversations = sort_conversations(conversations, TOTAL_MESSAGES_SORT_MODE)
-		fig1 = go.Figure(
-			data=[conv.words_history_bar_obj() for conv in sorted_conversations[0:6]]
-			)
-		fig1.update_layout(barmode='group')
-
-		fig1.show()
-	
+		display_conversations_as_bars(conversations, up_to=num_to_display, use_words=use_words)
