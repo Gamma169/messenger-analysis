@@ -48,6 +48,7 @@ Nulla fermentum interdum scelerisque. Pellentesque gravida blandit dolor, eu por
 """.strip().split()
 
 ###########################################################################
+# Helper funcs
 
 def print_usage():
     print("""
@@ -57,6 +58,28 @@ def print_usage():
     	{other_name} - Other person's name as it appears in the file
     	[anonymous_name] - (Optional) Name for output of the file
     	""")
+
+
+def anonymize_uris_actors(msg_dict):
+	for key in msg_dict.keys():
+		
+		if key in ['uri', 'actor']:
+			msg_dict[key] = ''
+		else:
+			attr = msg_dict[key]
+			if type(attr) is list:
+				for i in range(len(attr)):
+					if type(attr[i]) is dict:
+						anonymize_uris_actors(attr[i])
+					else:
+						attr[i] = ''
+					
+			elif type(attr) is dict:
+				anonymize_uris_actors(attr)
+
+###########################################################################
+# Main Script
+
 
 if len(sys.argv) not in [4, 5]:
 	print_usage()
@@ -77,9 +100,24 @@ with open(file) as f:
 	for participant in data['participants']:
 		participant['name'] = anonymous_name if participant['name'] == other_name else 'Me'
 
+
+	data['title'] = 'Anonymous Conversation'
+	data['thread_path'] = ''
+
+	lorem = 0
 	for message in data['messages']:
-		sender_name = message['sender_name']
-		sender_name = anonymous_name if sender_name == other_name else 'Me'
+		message['sender_name'] = anonymous_name if message['sender_name'] == other_name else 'Me'
+		if message.get('content'):
+			content = message['content'].split()
+			for i in range(len(content)):
+				content[i] = LOREM_IPSUM[lorem % len(LOREM_IPSUM)]
+				lorem += 1
+
+			lorem = lorem % len(LOREM_IPSUM)
+			
+			message['content'] = ' '.join(content)
+
+		anonymize_uris_actors(message)
 
 
 	(path, file_name) = os.path.split(file)
