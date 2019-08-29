@@ -35,6 +35,7 @@ UNDERLINE = '\033[4m'
 END = '\033[0m'
 
 TOTAL_MESSAGES_SORT_MODE = 'total'
+WORDS_SORT_MODE = 'num_words'
 IMGUR_LINKS_SORT_MODE = 'imgur'
 OLDEST_SORT_MODE = 'oldest'
 
@@ -44,15 +45,20 @@ SORT_CONFIGS = {
 		'sort_func': lambda conversation: conversation.summary.total_messages,
 		'reverse': True,
 	},
-	IMGUR_LINKS_SORT_MODE: {
-		'type': 'Imgur',
-		'sort_func': lambda conversation: conversation.summary.imgur_links,
+	WORDS_SORT_MODE: {
+		'type': 'Num Words',
+		'sort_func': lambda conversation: conversation.summary.num_words,
 		'reverse': True,
-	},	
+	},
 	OLDEST_SORT_MODE: {
 		'type': 'Oldest',
 		'sort_func': lambda conversation: conversation.summary.oldest_message_time,
 		'reverse': False,
+	},
+	IMGUR_LINKS_SORT_MODE: {
+		'type': 'Imgur',
+		'sort_func': lambda conversation: conversation.summary.imgur_links,
+		'reverse': True,
 	},	
 }
 
@@ -124,6 +130,7 @@ class ConversationSummary(object):
 		self.my_actual_messages = 0
 		self.other_messages = 0
 		self.imgur_links = 0
+		self.num_words = 0
 
 		for message in messages:
 			if message.sent_by_me():
@@ -135,6 +142,7 @@ class ConversationSummary(object):
 			else:
 				self.other_messages += 1
 
+			self.num_words += message.words_in_message()
 
 		self.newest_message_time = messages[0].time
 		self.oldest_message_time = messages[-1].time
@@ -146,6 +154,7 @@ class ConversationSummary(object):
 		return """
 	{bold}{blue}{name}{end}
 	{green}{underline}Total Messages:{end}       {bold}{total}{end}
+	{green}{underline}Total Words Written:{end}  {bold}{words}{end}
 	{green}{underline}My Total Messages:{end}    {bold}{mine}{end}
 	{green}{underline}My Imgur Links:{end}       {bold}{imgur}{end}
 	{green}{underline}My Actual Messages:{end}   {bold}{mine_actual}{end}
@@ -156,7 +165,7 @@ class ConversationSummary(object):
 	{green}{underline}Avg Messages Per Day:{end} {bold}{avg}{end}
 		""".format(bold=BOLD, green=GREEN, blue=BLUE, underline=UNDERLINE, end=END, 
 			name=self.other_person,
-			total=self.total_messages, mine=self.my_total_messages, imgur=self.imgur_links, mine_actual=self.my_actual_messages, other=self.other_messages, 
+			total=self.total_messages, words=self.num_words, mine=self.my_total_messages, imgur=self.imgur_links, mine_actual=self.my_actual_messages, other=self.other_messages,
 			oldest=self.oldest_message_time, newest=self.newest_message_time, days=self.days_spoken, avg=self.average_msg_per_day).strip()
 
 
@@ -426,7 +435,7 @@ if __name__ == '__main__':
 		help='Relative or absolute path to the location of the conversation folders. Default "./inbox"')
 	parser.add_argument('-i', '--include-threshold', type=int, default=is_worth_including_threshold,
 		help='The smallest number of total messages in a conversation for a conversation to be counted. Default 100')
-	parser.add_argument('-s', '--sort-mode', type=str, default=sort_mode, choices=[TOTAL_MESSAGES_SORT_MODE, IMGUR_LINKS_SORT_MODE, OLDEST_SORT_MODE], 
+	parser.add_argument('-s', '--sort-mode', type=str, default=sort_mode, choices=[TOTAL_MESSAGES_SORT_MODE, WORDS_SORT_MODE, OLDEST_SORT_MODE, IMGUR_LINKS_SORT_MODE], 
 		help='How to sort the messages by.  Default "total"')
 	parser.add_argument('-t', '--top-people', type=int, default=5,
 		help='The top number of people people to display.  Default 5')
@@ -436,6 +445,9 @@ if __name__ == '__main__':
 	# Summary-only
 	parser.add_argument('-so', '--summary-only', action='store_true',
 		help='Print only summary information in command-line.  Do not display graphs')
+	# Pring History
+	parser.add_argument('-ph', '--print-history', action='store_true',
+		help='Print the messaging history per month')
 	# Include Words-Count
 	parser.add_argument('-w', '--word-count', action='store_true',
 		help='Display analysis with word-count in addition to total messages')
@@ -453,6 +465,7 @@ if __name__ == '__main__':
 	summary_only = args.summary_only
 	use_words = args.word_count
 	bar_mode = args.bar_mode
+	print_history = args.print_history
 	
 	conversations = get_conversations()
 	if len(filtered_list) > 0:
@@ -463,8 +476,9 @@ if __name__ == '__main__':
 	print_summary_data(conversations, up_to=num_to_display, sort_mode=sort_mode)
 	
 	if not summary_only:
-		print_header('Messaging History in Total Messages Per Month')
-		print_messaging_history(conversations, up_to=num_to_display, sort_mode=sort_mode)
+		if print_history:
+			print_header('Messaging History in Total Messages Per Month')
+			print_messaging_history(conversations, up_to=num_to_display, sort_mode=sort_mode)
 	
 		if use_words:
 			print_header('Messaging History in Total Words Per Month')
