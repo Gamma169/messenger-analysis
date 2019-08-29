@@ -355,7 +355,7 @@ def sort_conversations(conversations, sort_mode):
 
 
 def _print_messages(conversations, up_to, sort_mode, print_func):
-	print_header('Conversations Sorted By ' + SORT_CONFIGS[sort_mode]['type'])
+	print_header('Top ' + str(up_to) + ' Conversations Sorted By ' + SORT_CONFIGS[sort_mode]['type'])
 	sorted_conversations = sort_conversations(conversations, sort_mode)
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
@@ -396,6 +396,9 @@ def _style_bar_chart(figure, name, is_words=True, bar_mode='group'):
 	)
 
 def display_conversations_relative_percents(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False):
+	"""
+	Honestly, these graphs are kinda ugly.  Thought they'd be cool, but with more than 3 people, they're just messy
+	"""
 	conversations_sorted = sort_conversations(conversations, sort_mode)
 
 	total_messages_figure = go.Figure()
@@ -489,6 +492,8 @@ if __name__ == '__main__':
 		help='Display analysis with word-count in addition to total messages')
 	parser.add_argument('-b', '--bar-mode', type=str, default='group', choices=['group', 'stack'], 
 		help='How to display the bars in the history graph. Default "group"')
+	parser.add_argument('-rg', '--relative-graphs', action='store_true',
+		help='Display the relative-percent graphs as well')
 
 	args = parser.parse_args()
 	
@@ -502,24 +507,27 @@ if __name__ == '__main__':
 	use_words = args.word_count
 	bar_mode = args.bar_mode
 	print_history = args.print_history
+	display_relative = args.relative_graphs
 	
 	conversations = get_conversations()
 	if len(filtered_list) > 0:
-		print_header('Filtering Conversations Down To {} Given Names'.format(len(filtered_list)))
+		print_header('Filtering Conversations Down To Top {} of {} Given Names'.format(num_to_display, len(filtered_list)))
 		conversations = [conv for conv in conversations if conv.other_person in filtered_list]
 
 
 	print_summary_data(conversations, up_to=num_to_display, sort_mode=sort_mode)
 	
 	if not summary_only:
+		
 		if print_history:
 			print_header('Messaging History in Total Messages Per Month')
 			print_messaging_history(conversations, up_to=num_to_display, sort_mode=sort_mode)
-	
-		if use_words:
-			print_header('Messaging History in Total Words Per Month')
-			print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
+
+			if use_words:
+				print_header('Messaging History in Total Words Per Month')
+				print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
 
 		display_conversations_as_bars(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words, bar_mode=bar_mode)
 
-		display_conversations_relative_percents(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words)
+		if display_relative:
+			display_conversations_relative_percents(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words)
