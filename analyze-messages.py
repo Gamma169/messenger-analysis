@@ -91,7 +91,6 @@ class Conversation(object):
 	def words_history_str(self):
 		return self.header_str + str(self.history.words_month_str())
 
-
 	def messages_history_bar_obj(self):
 		return self._create_bar_on_history_map(self.history.messages_month_map())
 
@@ -110,6 +109,41 @@ class Conversation(object):
 	def _create_relative_line_on_history_map(self, history_map):
 		return go.Scatter(name=self.other_person, x=self.history.message_dates, y=[history_map[month] for month in self.history.message_dates],
 			mode='lines', stackgroup='one', groupnorm='percent')
+
+	def number_conversation_starts(self, hour_threshold=72, count_links=True):
+		"""
+		Get the number of times someone started a conversation after an elapsed period of time
+		param hour_threshold: threshold for number of hours before a conversation is considered a "new" conversation 
+		param count_links: whether the
+		returns dict with name of person as key and number of times as value. 
+		If count_links is True, will also have '<Name> Links' as keys and links that started a convo as values
+		return dict also has 'hour_threshold' as convenience
+		"""
+		convo_starts = {
+			my_facebook_name: 0,
+			self.other_person: 0,
+			'hour_threshold': hour_threshold
+		}
+		if count_links:
+			my_links = my_facebook_name + ' Links'
+			other_links = self.other_person + ' Links'
+			convo_starts[my_links] = 0
+			convo_starts[other_links] = 0
+
+		for i in range(1, len(self.messages)):
+			time_diff = (self.messages[i-1].time - self.messages[i].time).total_seconds() / 3600
+			if time_diff >= hour_threshold:
+				if self.messages[i].sent_by_me():
+					convo_starts[my_facebook_name] += 1
+					if count_links and self.messages[i].imgur_links_in_message() > 0:
+						convo_starts[my_links] += 1
+				else:
+					convo_starts[self.other_person] += 1
+					if count_links and self.messages[i].imgur_links_in_message() > 0:
+						convo_starts[other_links] += 1
+
+		return convo_starts
+
 
 
 ###########################################################################
@@ -311,7 +345,9 @@ def print_messaging_history(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SOR
 
 def print_messaging_history_words_per_month(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE):
 	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.words_history_str())	
-	
+
+def print_conversation_starts(conversations, up_to=7, sort_mode=TOTAL_MESSAGES_SORT_MODE, hour_threshold=72):
+	_print_messages(conversations, up_to, sort_mode, lambda conversation: conversation.number_conversation_starts(hour_threshold=hour_threshold))
 
 def sort_conversations(conversations, sort_mode):
 	sort_obj = SORT_CONFIGS[sort_mode]
