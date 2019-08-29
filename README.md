@@ -26,6 +26,7 @@ Basic Run:
 `python3 analyze-messages.py <your facebook name>`
 
 There are also a number of options:
+
 | Option |      Long-form      | Description                                                                                                                                                                                   |
 |:------:|:-------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | -h     | --help              | Display help message                                                                                                                                                                          |
@@ -38,7 +39,6 @@ There are also a number of options:
 | -ph    | --print-history     | Print the messaging history per month                                                                                                                                                         |
 | -w     | --word-count        | Display analysis with word-count in addition to total messages                                                                                                                                |
 | -b     | --bar-mode          | How to display the bars in the history graph. Options: 'group', 'stack'. Default "group"                                                                                                      |
-
 
 
 ## Examples
