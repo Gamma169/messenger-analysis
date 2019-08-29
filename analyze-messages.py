@@ -440,7 +440,7 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--top-people', type=int, default=5,
 		help='The top number of people people to display.  Default 5')
 	parser.add_argument('-f', '--filter', type=str, default='',
-		help='List of names, seperated by comma, for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name.')
+		help='List of names, separated by comma, for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name.')
 
 	# Summary-only
 	parser.add_argument('-so', '--summary-only', action='store_true',
