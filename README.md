@@ -45,11 +45,19 @@ There are also a number of options:
 
 I've included two anonymized conversations as examples so that the program will run out of the box.
 
+### Example Summary Print
+
 ![Example Summary Print](SummaryPrintExample.png?raw=true "Example Summary Print")
+
+### Example Total Messages Bar Graph With Grouped Bars
 
 ![Example Grouped Bar Chart](TotalMessagesGroupedExample.png?raw=true "Example Total Messages Bar Graph With Grouped Bars")
 
+### Example Total Messages Bar Graph With Stacked Bars
+
 ![Example Stacked Bar Chart](TotalMessagesStackedExample.png?raw=true "Example Total Messages Bar Graph With Stacked Bars")
+
+### Example Total Messages Relative Percent Graph
 
 ![Example Relative Messages Chart](TotalMessagesRelativeExample.png?raw=true "Example Total Messages Relative Percent Graph")
 
