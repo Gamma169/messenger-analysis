@@ -32,7 +32,7 @@ There are also a number of options:
 | -h     | --help              | Display help message                                                                                                                                                                          |
 | -p     | --path              | Relative or absolute path to the location of the conversation folders. Default "./inbox"                                                                                                      |
 | -i     | --include-threshold | The smallest number of total messages in a conversation for a conversation to be counted. Default 100                                                                                         |
-| -s     | --sort-mode         | How to sort the messages by.  Options: 'total', 'num_words', 'oldest', 'imgur'. Default "total"                                                                                               |
+| -s     | --sort-mode         | How to sort the messages.  Options: 'total', 'num_words', 'oldest', 'imgur'. Default "total"                                                                                               |
 | -t     | --top-people        | The top number of people people to display.  Default 5                                                                                                                                        |
 | -f     | --filter            | List of names, separated by comma, for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name |
 | -so    | --summary-only      | Print only summary information in command-line.  Do not display graphs                                                                                                                        |
@@ -48,7 +48,7 @@ I've included two anonymized conversations as examples so that the program will 
 
 ## Testing
 
-There is currently no tests on the program
+There are currently no tests for the program
 
 ### Anonymization
 
