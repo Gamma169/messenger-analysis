@@ -27,28 +27,36 @@ Basic Run:
 
 There are also a number of options:
 
-| Option |      Long-form      | Description                                                                                                                                                                                   |
-|:------:|:-------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| -h     | --help              | Display help message                                                                                                                                                                          |
-| -p     | --path              | Relative or absolute path to the location of the conversation folders. Default "./inbox"                                                                                                      |
-| -i     | --include-threshold | The smallest number of total messages in a conversation for a conversation to be counted. Default 100                                                                                         |
-| -s     | --sort-mode         | How to sort the messages.  Options: 'total', 'num_words', 'oldest', 'imgur'. Default "total"                                                                                               |
-| -t     | --top-people        | The top number of people people to display.  Default 5                                                                                                                                        |
-| -f     | --filter            | List of names, separated by comma, for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name |
-| -so    | --summary-only      | Print only summary information in command-line.  Do not display graphs                                                                                                                        |
-| -ph    | --print-history     | Print the messaging history per month                                                                                                                                                         |
-| -w     | --word-count        | Display analysis with word-count in addition to total messages                                                                                                                                |
-| -b     | --bar-mode          | How to display the bars in the history graph. Options: 'group', 'stack'. Default "group"                                                                                                      |
-| -rg    | --relative-graphs   | Display the relative-percent graphs as well (kinda ugly if done with more than 3-4 people)                                                                                                    |
+| Option |      Long-form      | Description                                                                                                                                                                                                           |
+|:------:|:-------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -h     | --help              | Display help message                                                                                                                                                                                                  |
+| -p     | --path              | Relative or absolute path to the location of the conversation folders. Default "./inbox"                                                                                                                              |
+| -i     | --include-threshold | The smallest number of total messages in a conversation for a conversation to be counted. Default 100                                                                                                                 |
+| -s     | --sort-mode         | How to sort the messages.  Options: 'total', 'num_words', 'oldest', 'imgur'. Default "total"                                                                                                                          |
+| -t     | --top-people        | The top number of people people to display.  Default 5                                                                                                                                                                |
+| -f     | --filter            | List of names, separated by comma (no whitespace between), for the program to filter to. If not provided, will do no filtering.  If a given name does not exist, will still filter, but will do nothing for that name |
+| -so    | --summary-only      | Print only summary information in command-line.  Do not display graphs                                                                                                                                                |
+| -ph    | --print-history     | Print the messaging history per month                                                                                                                                                                                 |
+| -w     | --word-count        | Display analysis with word-count in addition to total messages                                                                                                                                                        |
+| -b     | --bar-mode          | How to display the bars in the history graph. Options: 'group', 'stack'. Default "group"                                                                                                                              |
+| -rg    | --relative-graphs   | Display the relative-percent graphs as well (kinda ugly if done with more than 3-4 people)                                                                                                                            |
 
 ## Examples
 
 I've included two anonymized conversations as examples so that the program will run out of the box.
 
+![Example Summary Print](SummaryPrintExample.png?raw=true "Example Summary Print")
+
+![Example Grouped Bar Chart](TotalMessagesGroupedExample.png?raw=true "Example Total Messages Bar Graph With Grouped Bars")
+
+![Example Stacked Bar Chart](TotalMessagesStackedExample.png?raw=true "Example Total Messages Bar Graph With Stacked Bars")
+
+![Example Relative Messages Chart](TotalMessagesRelativeExample.png?raw=true "Example Total Messages Relative Percent Graph")
+
 
 ## Testing
 
-There are currently no tests for the program
+There are currently no tests for the program 
 
 ### Anonymization
 
