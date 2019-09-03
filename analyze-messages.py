@@ -439,9 +439,11 @@ def get_conversations():
 	folders = os.listdir(path)
 	for name in folders:
 		files = os.listdir(path + '/' + name)
-		if files[0] == 'message.json':
+		if 'message.json' in files or 'message_1.json' in files:
 			num_conversations += 1
-			with open('{}/{}/message.json'.format(path, name)) as f:
+			# Older versions of the download come as 'message.json' while newer ones might come as 'message_1.json'
+			file_name = 'message.json' if 'message.json' in files else 'message_1.json'
+			with open('{}/{}/{}'.format(path, name, file_name)) as f:
 				data = json.load(f)
 				participants = data['participants']
 				if len(participants) == 2:
