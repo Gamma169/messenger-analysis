@@ -313,7 +313,7 @@ class Message(object):
 		return 0 if self.is_call() else len(self.content.split())
 
 	def imgur_links_in_message(self):
-		return 1 if (self.type == 'Share' and 'imgur' in getattr(self, 'share', {'link':''})['link']) or ('imgur.com' in self.content) else 0
+		return 1 if (self.type == 'Share' and 'imgur' in getattr(self, 'share', {'link':''}).get('link', '')) or ('imgur.com' in self.content) else 0
 
 
 	def __str__(self):
@@ -439,18 +439,25 @@ def get_conversations():
 	folders = os.listdir(path)
 	for name in folders:
 		files = os.listdir(path + '/' + name)
-		if 'message.json' in files or 'message_1.json' in files:
+		has_json_files = any('.json' in file_name for file_name in files)
+		if has_json_files:
 			num_conversations += 1
-			# Older versions of the download come as 'message.json' while newer ones might come as 'message_1.json'
-			file_name = 'message.json' if 'message.json' in files else 'message_1.json'
-			with open('{}/{}/{}'.format(path, name, file_name)) as f:
-				data = json.load(f)
-				participants = data['participants']
-				if len(participants) == 2:
-					num_conversations_with_two_people += 1
-				
-					if is_worth_including(data['messages']):
-						conversations.append(Conversation(data['messages']))
+			json_files = [file_name for file_name in files if '.json' in file_name]
+			json_files.sort()
+			# Large conversations get split up in multiple files, so we have to consolidate the conversation
+			# Note that current facebook implementation has `message_1.json` the newest files, and `message_3.json` the oldest, so we can just concat them together
+			all_messages = []
+			for idx, file_name in enumerate(json_files):
+				with open('{}/{}/{}'.format(path, name, file_name)) as f:
+					data = json.load(f)
+					participants = data['participants']
+					if len(participants) == 2:
+						if idx == 0:
+							num_conversations_with_two_people += 1
+						all_messages.extend(data['messages'])
+					
+			if is_worth_including(all_messages):
+				conversations.append(Conversation(all_messages))
 
 	print_header('Number of Conversations Found')
 	print(num_conversations)
