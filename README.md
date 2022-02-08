@@ -40,6 +40,8 @@ There are also a number of options:
 | -w     | --word-count        | Display analysis with word-count in addition to total messages                                                                                                                                                        |
 | -b     | --bar-mode          | How to display the bars in the history graph. Options: 'group', 'stack'. Default "group"                                                                                                                              |
 | -rg    | --relative-graphs   | Display the relative-percent graphs as well (kinda ugly if done with more than 3-4 people)                                                                                                                            |
+| -c     | --calls             | Include graphs that display info about calls. Default False                                                                                                                                                           |
+| -wc    | --words-calls       | Add call duration to word-count calculations based on 120wpm conversation discussion speed                                                                                                                            |
 
 ## Examples
 

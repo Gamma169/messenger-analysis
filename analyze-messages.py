@@ -17,7 +17,18 @@ my_facebook_name = ''
 # Optional
 path = './inbox'
 
+# Ignore convos with less than 100 messages-- can be configured
 is_worth_including_threshold = 100
+
+# Whether should include call duration in words-spoken
+include_call_words = False
+
+# How many words per second should be included if the above `include_call_words` is True
+# Taken from https://virtualspeech.com/blog/average-speaking-rate-words-per-minute
+call_speak_rate = 120 / 60
+
+# Ignore calls shorter than 10 seconds
+min_call_duration_length = 10
 
 sort_mode = 'total'
 
@@ -97,6 +108,12 @@ class Conversation(object):
 	def words_history_bar_obj(self):
 		return self._create_bar_on_history_map(self.history.words_month_map())
 
+	def call_history_bar_obj(self):
+		return self._create_bar_on_history_map(self.history.calls_month_map())
+
+	def call_duration_history_bar_obj(self):
+		return self._create_bar_on_history_map(self.history.call_duration_month_map())
+
 	def _create_bar_on_history_map(self, history_map):
 		return go.Bar(name=self.other_person, x=self.history.message_dates, y=[history_map[month] for month in self.history.message_dates])
 
@@ -165,6 +182,7 @@ class ConversationSummary(object):
 		self.other_messages = 0
 		self.imgur_links = 0
 		self.num_words = 0
+		self.num_calls = 0
 
 		for message in messages:
 			if message.sent_by_me():
@@ -176,13 +194,19 @@ class ConversationSummary(object):
 			else:
 				self.other_messages += 1
 
-			self.num_words += message.words_in_message()
+			self.num_words += message.words_in_message(include_call_words)
+
+			if message.is_call() and message.call_duration > min_call_duration_length:
+				self.num_calls += 1
 
 		self.newest_message_time = messages[0].time
 		self.oldest_message_time = messages[-1].time
 		# Should probably filter out some outliers
 		self.days_spoken = (self.newest_message_time - self.oldest_message_time).days
 		self.average_msg_per_day = self.total_messages / (float(self.days_spoken) if self.days_spoken else 1)
+		self.avg_calls_per_month = self.num_calls / (float(self.days_spoken / 30) if self.days_spoken else 1)
+
+
 
 	def __str__(self):
 		return """
@@ -190,6 +214,7 @@ class ConversationSummary(object):
 	{green}{underline}Total Messages:{end}       {bold}{total}{end}
 	{green}{underline}Total Words Written:{end}  {bold}{words}{end}
 	{green}{underline}My Total Messages:{end}    {bold}{mine}{end}
+	{green}{underline}Number of Calls:{end}      {bold}{calls}{end}
 	{green}{underline}My Imgur Links:{end}       {bold}{imgur}{end}
 	{green}{underline}My Actual Messages:{end}   {bold}{mine_actual}{end}
 	{green}{underline}Other Messages:{end}       {bold}{other}{end}
@@ -197,10 +222,11 @@ class ConversationSummary(object):
 	{green}{underline}Newest Message:{end}       {bold}{newest}{end}
 	{green}{underline}Days Spoken:{end}          {bold}{days}{end}
 	{green}{underline}Avg Messages Per Day:{end} {bold}{avg}{end}
+	{green}{underline}Avg Calls Per Month: {end} {bold}{avg_calls}{end}
 		""".format(bold=BOLD, green=GREEN, blue=BLUE, underline=UNDERLINE, end=END, 
 			name=self.other_person,
-			total=self.total_messages, words=self.num_words, mine=self.my_total_messages, imgur=self.imgur_links, mine_actual=self.my_actual_messages, other=self.other_messages,
-			oldest=self.oldest_message_time, newest=self.newest_message_time, days=self.days_spoken, avg=self.average_msg_per_day).strip()
+			total=self.total_messages, words=self.num_words, mine=self.my_total_messages, calls=self.num_calls, imgur=self.imgur_links, mine_actual=self.my_actual_messages, other=self.other_messages,
+			oldest=self.oldest_message_time, newest=self.newest_message_time, days=self.days_spoken, avg=self.average_msg_per_day, avg_calls=self.avg_calls_per_month).strip()
 
 
 ###########################################################################
@@ -214,6 +240,8 @@ class ConversationHistory(object):
 		# A dict that holds references to message object based on the month was sent in
 		# Key is string 'YYYY-MM'
 		self.monthly_messages = {}
+		# dict that holds specifically call-messages same as above messages
+		self.monthly_calls = {}
 
 		for message in messages:
 			year_month = message.year_month()
@@ -222,6 +250,12 @@ class ConversationHistory(object):
 			else:
 				self.monthly_messages[year_month] = [message]
 
+			if message.is_call() and message.call_duration >= min_call_duration_length:
+				if self.monthly_calls.get(year_month):
+					self.monthly_calls[year_month].append(message)
+				else:
+					self.monthly_calls[year_month] = [message]
+
 
 		# Get all the year-month keys in a sorted order
 		self.message_dates = sorted(self.monthly_messages.keys(), key=lambda year_month: year_month)
@@ -229,12 +263,23 @@ class ConversationHistory(object):
 	def num_messages_for_month(self, yyyy_mm):
 		return len(self.monthly_messages.get(yyyy_mm, []))
 
+	def num_calls_for_month(self, yyyy_mm):
+		return len(self.monthly_calls.get(yyyy_mm, []))
+
 	def num_words_for_month(self, yyyy_mm):
 		messages = self.monthly_messages.get(yyyy_mm, [])
 		num_words = 0
 		for message in messages:
-			num_words += message.words_in_message()
+			num_words += message.words_in_message(include_call_words)
 		return num_words
+
+	def call_duration_for_month(self, yyyy_mm):
+		messages = self.monthly_calls.get(yyyy_mm, [])
+		call_duration = 0
+		for message in messages:
+			call_duration += message.call_duration
+		return call_duration
+
 
 	def messages_month_map(self):
 		"""Maps monthly_messages into number of messages sent each month"""
@@ -243,6 +288,14 @@ class ConversationHistory(object):
 	def words_month_map(self):
 		"""Maps monthly_messages into number of words sent each month"""
 		return self._map(lambda month: self.num_words_for_month(month))
+
+	def calls_month_map(self):
+		"""Maps monthly_calls into number of calls sent each month"""
+		return self._map(lambda month: self.num_calls_for_month(month))
+
+	def call_duration_month_map(self):
+		"""Maps monthly_calls into duration of calls each month"""
+		return self._map(lambda month: self.call_duration_for_month(month))
 
 	def words_per_message_month_map(self):
 		"""Maps monthly_messages into number of words per message sent each month"""
@@ -291,6 +344,8 @@ class Message(object):
 		# Somehow, a message can not have the content key
 		self.content = kwargs.get('content', '')
 
+		self.call_duration = kwargs.get('call_duration', -1)
+
 		for k in kwargs:
 			setattr(self, k, kwargs[k])
 
@@ -309,21 +364,32 @@ class Message(object):
 	def is_call(self):
 		return self.type == "Call"
 
-	def words_in_message(self):
-		return 0 if self.is_call() else len(self.content.split())
+
+	def words_in_message(self, include_call=False):
+		call_words = 0
+		if include_call and self.is_call:
+			call_words = call_speak_rate * self.call_duration
+		
+		return call_words if self.is_call() else len(self.content.split())
 
 	def imgur_links_in_message(self):
 		return 1 if (self.type == 'Share' and 'imgur' in getattr(self, 'share', {'link':''}).get('link', '')) or ('imgur.com' in self.content) else 0
 
 
 	def __str__(self):
-		return """
+		msg =  """
 		Conversation: {conv}
 		Sender: {sender}
 		Type: {type}
 		Time: {time}
-		Content: {content}
-		""".format(conv=self.conversation.other_person, sender=self.sender, type=self.type, time=self.time, content=self.content).strip()
+		""".format(conv=self.conversation.other_person, sender=self.sender, type=self.type, time=self.time).strip()
+
+		if self.is_call():
+			msg += 'Call Duration: {dur}'.format(dur=self.call_duration)
+		else:
+			msg += 'Content: {content}'.format(content=self.content)
+
+		return msg
 
 
 
@@ -360,23 +426,38 @@ def _print_messages(conversations, up_to, sort_mode, print_func):
 	for idx, conversation in enumerate(sorted_conversations[0:up_to]):
 		print(idx+1, print_func(conversation))
 
-def display_conversations_as_bars(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False, bar_mode='group'):
+def display_conversations_as_bars(conversations, up_to=5, sort_mode=TOTAL_MESSAGES_SORT_MODE, use_words=False, bar_mode='group', calls_graphs=False):
 	conversations_sorted = sort_conversations(conversations, sort_mode)
 
 	history_total_msgs_figure = go.Figure(
 		data=[conv.messages_history_bar_obj() for conv in conversations_sorted[0:up_to]]
 	)
-	_style_bar_chart(history_total_msgs_figure, 'Total Messages Sent In Conversation Over Time', is_words=False, bar_mode=bar_mode)
+	_style_bar_chart(history_total_msgs_figure, 'Total Messages Sent In Conversation Over Time', y_axis_title='Total Number of Messages Sent', bar_mode=bar_mode)
 	history_total_msgs_figure.show()
+	
+	if calls_graphs:
+		history_calls_figure = go.Figure(
+			data=[conv.call_history_bar_obj() for conv in conversations_sorted[0:up_to]]
+		)
+		_style_bar_chart(history_calls_figure, 'Total Calls In Conversation Over Time', y_axis_title='Number of Calls', bar_mode=bar_mode)
+		history_calls_figure.show()
 
 	if use_words:
 		history_words_figure = go.Figure(
 			data=[conv.words_history_bar_obj() for conv in conversations_sorted[0:up_to]]
 		)
-		_style_bar_chart(history_words_figure, 'Total Words Written In Conversation Over Time', is_words=True, bar_mode=bar_mode)
+		_style_bar_chart(history_words_figure, 'Total Words Written In Conversation Over Time', y_axis_title='Total Amount of Words Written', bar_mode=bar_mode)
 		history_words_figure.show()
 
-def _style_bar_chart(figure, name, is_words=True, bar_mode='group'):
+		if calls_graphs:
+			history_calls_duration_figure = go.Figure(
+				data=[conv.call_duration_history_bar_obj() for conv in conversations_sorted[0:up_to]]
+			)
+			_style_bar_chart(history_calls_duration_figure, 'Total Seconds Spent on Call in Conversation Over Time', y_axis_title='Seconds Spent On Call', bar_mode=bar_mode)
+			history_calls_duration_figure.show()
+
+
+def _style_bar_chart(figure, name, y_axis_title, bar_mode='group'):
 	figure.update_layout(
 		barmode=bar_mode,
 		title=go.layout.Title(
@@ -389,9 +470,7 @@ def _style_bar_chart(figure, name, is_words=True, bar_mode='group'):
 			tickangle=-45
 		),
 		yaxis=go.layout.YAxis(
-		title=go.layout.yaxis.Title(
-			text='Total Amount of Words Written' if is_words else 'Total Number of Messages Sent',
-			)
+		title=go.layout.yaxis.Title(text=y_axis_title)
 		)
 	)
 
@@ -498,11 +577,15 @@ if __name__ == '__main__':
 		help='Print the messaging history per month')
 	# Include Words-Count
 	parser.add_argument('-w', '--word-count', action='store_true',
-		help='Display analysis with word-count in addition to total messages')
+		help='Display analysis with word-count in addition to total messages-- if paired with -c, will display call duration graphs')
 	parser.add_argument('-b', '--bar-mode', type=str, default='group', choices=['group', 'stack'], 
 		help='How to display the bars in the history graph. Default "group"')
 	parser.add_argument('-rg', '--relative-graphs', action='store_true',
 		help='Display the relative-percent graphs as well')
+	parser.add_argument('-c', '--calls', action='store_true',
+		help='Generate analysis on call graphs')
+	parser.add_argument('-wc', '--words-calls', action='store_true',
+		help='Include call duration in word-count calculations')
 
 	args = parser.parse_args()
 	
@@ -517,6 +600,11 @@ if __name__ == '__main__':
 	bar_mode = args.bar_mode
 	print_history = args.print_history
 	display_relative = args.relative_graphs
+	calls_graphs = args.calls
+
+	# Note this is global var
+	include_call_words = args.words_calls
+
 	
 	conversations = get_conversations()
 	if len(filtered_list) > 0:
@@ -536,7 +624,7 @@ if __name__ == '__main__':
 				print_header('Messaging History in Total Words Per Month')
 				print_messaging_history_words_per_month(conversations, up_to=num_to_display, sort_mode=sort_mode)
 
-		display_conversations_as_bars(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words, bar_mode=bar_mode)
+		display_conversations_as_bars(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words, bar_mode=bar_mode, calls_graphs=calls_graphs)
 
 		if display_relative:
 			display_conversations_relative_percents(conversations, up_to=num_to_display, sort_mode=sort_mode, use_words=use_words)
