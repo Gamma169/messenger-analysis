@@ -339,7 +339,6 @@ class Message(object):
 		# We want the message to die if it doesn't have these kwargs
 		self.time = datetime.fromtimestamp(kwargs['timestamp_ms']/1000)
 		self.sender = kwargs['sender_name']
-		self.type = kwargs['type']
 
 		# Somehow, a message can not have the content key
 		self.content = kwargs.get('content', '')
@@ -362,7 +361,7 @@ class Message(object):
 	# Calls have a duration	
 
 	def is_call(self):
-		return self.type == "Call"
+		return self.call_duration > -1
 
 
 	def words_in_message(self, include_call=False):
@@ -373,7 +372,7 @@ class Message(object):
 		return call_words if self.is_call() else len(self.content.split())
 
 	def imgur_links_in_message(self):
-		return 1 if (self.type == 'Share' and 'imgur' in getattr(self, 'share', {'link':''}).get('link', '')) or ('imgur.com' in self.content) else 0
+		return 1 if ('imgur' in getattr(self, 'share', {'link':''}).get('link', '')) or ('imgur.com' in self.content) else 0
 
 
 	def __str__(self):
